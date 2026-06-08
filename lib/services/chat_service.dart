@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/chat_model.dart';
 
 class ChatService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Since we don't have real auth yet, we simulate a mock user ID
-  static const String currentUserId = 'mock_user_123';
+  // Retrieve the authenticated user's UID dynamically
+  static String get currentUserId => FirebaseAuth.instance.currentUser?.uid ?? 'guest';
 
   // Retrieve an existing chat room or create a new deterministic one
   Future<String> getOrCreateChatRoom(String postId, String itemOwnerId) async {

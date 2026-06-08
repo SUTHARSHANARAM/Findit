@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isString(val) {
+      return val is string;
+    }
+    function isBool(val) {
+      return val is bool;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Anyone can read profiles
+      allow read: if true;
+      // Users can only create or update their own profile document
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      // No one can delete profile documents from the client app
+      allow delete: if false;
+    }
+
+    // Rules for the 'posts' collection
+    match /posts/{postId} {
+      // Allow public read access so any visitor can browse lost/found posts
+      allow read: if true;
+
+      // Allow creating posts only if authenticated and the creator is set as the post owner
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.title is string
+                    && request.resource.data.description is string
+                    && request.resource.data.type in ['lost', 'found']
+                    && request.resource.data.location is string
+                    && request.resource.data.createdAt is string
+                    && request.resource.data.isResolved is bool;
+
+      // Allow updates to posts only by the owner, and prevent changing the owner field
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.userId
+                    && request.resource.data.userId == resource.data.userId
+                    && request.resource.data.title is string
+                    && request.resource.data.description is string
+                    && request.resource.data.type in ['lost', 'found']
+                    && request.resource.data.location is string
+                    && request.resource.data.isResolved is bool;
+
+      // Allow deletion only if the authenticated user is the owner of the post
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Rules for the 'chats' collection
+    match /chats/{chatId} {
+      // Allow reading and updating chat rooms only for participating users
+      allow read: if request.auth != null 
+                  && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2);
+      
+      allow create: if request.auth != null 
+                    && (request.auth.uid == request.resource.data.user1 || request.auth.uid == request.resource.data.user2)
+                    && request.resource.data.postId is string
+                    && request.resource.data.user1 is string
+                    && request.resource.data.user2 is string
+                    && request.resource.data.updatedAt is string;
+                    
+      allow update: if request.auth != null 
+                    && (request.auth.uid == resource.data.user1 || request.auth.uid == resource.data.user2)
+                    && request.resource.data.postId is string
+                    && request.resource.data.user1 is string
+                    && request.resource.data.user2 is string
+                    && request.resource.data.updatedAt is string;
+
+      // Prevent users from deleting chat rooms directly
+      allow delete: if false;
+
+      // Rules for individual messages within a chat room
+      match /messages/{messageId} {
+        // Allow reading messages in the chat room only for participating users
+        allow read: if request.auth != null 
+                    && (request.auth.uid == get(/databases/$(database)/documents/chats/$(chatId)).data.user1 
+                        || request.auth.uid == get(/databases/$(database)/documents/chats/$(chatId)).data.user2);
+
+        // Allow sending new messages with basic schema validation
+        allow create: if request.auth != null 
+                      && request.auth.uid == request.resource.data.senderId
+                      && request.resource.data.senderId is string
+                      && request.resource.data.text is string
+                      && request.resource.data.timestamp is string;
+
+        // Prevent modification or deletion of sent messages
+        allow update, delete: if false;
+      }
+    }
+  }
+}
