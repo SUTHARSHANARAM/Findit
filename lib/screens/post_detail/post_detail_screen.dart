@@ -23,46 +23,79 @@ class PostDetailScreen extends StatelessWidget {
         title: const Text('Item Details'),
         backgroundColor: "lost" == post.type ? AppColors.lostBadge : AppColors.foundBadge,
         foregroundColor: Colors.white,
-        actions: post.userId == ChatService.currentUserId ? [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: "Edit Item",
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(
-                builder: (context) => AddPostScreen(existingPost: post),
-              ));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            tooltip: "Delete Item",
-            onPressed: () async {
-              bool? confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete Post'),
-                  content: const Text('Are you sure you want to permanently delete this post?'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                  ],
-                ),
-              );
-              
-              if (confirm == true) {
-                final provider = Provider.of<PostProvider>(context, listen: false);
-                if (provider.useFirebase) {
-                  await FirestoreService().deletePost(post.id);
-                } else {
-                  provider.deletePost(post.id);
+        actions: [
+          if (post.userId == ChatService.currentUserId) ...[
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: "Edit Item",
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (context) => AddPostScreen(existingPost: post),
+                ));
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: "Delete Item",
+              onPressed: () async {
+                bool? confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Post'),
+                    content: const Text('Are you sure you want to permanently delete this post?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                );
+                
+                if (confirm == true) {
+                  final provider = Provider.of<PostProvider>(context, listen: false);
+                  if (provider.useFirebase) {
+                    await FirestoreService().deletePost(post.id);
+                  } else {
+                    provider.deletePost(post.id);
+                  }
+                  if (!context.mounted) return;
+                  Navigator.pop(context); // Go back to Home
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item deleted permanently.')));
                 }
-                if (!context.mounted) return;
-                Navigator.pop(context); // Go back to Home
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item deleted permanently.')));
-              }
-            },
-          ),
-        ] : null,
+              },
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.flag_outlined),
+              tooltip: "Report Post",
+              onPressed: () async {
+                bool? confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Report Post'),
+                    content: const Text('Do you want to report this post as suspicious or fraudulent?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Report', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+                
+                if (confirm == true) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Thank you! This post has been reported for admin review.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -148,7 +181,9 @@ class PostDetailScreen extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    post.location,
+                    post.district.isNotEmpty
+                        ? '${post.location} (${post.district})'
+                        : post.location,
                     style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
                   ),
                 ),
@@ -165,6 +200,50 @@ class PostDetailScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 16, color: AppColors.textPrimary, height: 1.5),
             ),
             
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.security, color: Colors.amber.shade900),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Safety & Verification Tips',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSafetyTip(
+                    Icons.question_answer_outlined,
+                    'Ask for unique details that are not in the description (e.g. keychains, scratches, receipts).',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSafetyTip(
+                    Icons.people_alt_outlined,
+                    'Always meet in a public, well-lit place (like a police station, campus gate, or mall entrance).',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSafetyTip(
+                    Icons.monetization_on_outlined,
+                    'Never pay money upfront for "shipping" or "finder fees" before seeing the item.',
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 48),
             // Show Mark as Resolved only for the Creator
             if (post.userId == ChatService.currentUserId && !post.isResolved) ...[
@@ -206,6 +285,22 @@ class PostDetailScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSafetyTip(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.amber.shade800),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 13, color: Colors.amber.shade900, height: 1.4),
+          ),
+        ),
+      ],
     );
   }
 }

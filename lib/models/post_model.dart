@@ -4,6 +4,7 @@ class PostModel {
   final String description;
   final String type; // "lost" or "found"
   final String location;
+  final String district;
   final double? latitude;
   final double? longitude;
   final String? imageUrl;
@@ -17,6 +18,7 @@ class PostModel {
     required this.description,
     required this.type,
     required this.location,
+    this.district = '',
     this.latitude,
     this.longitude,
     this.imageUrl,
@@ -33,6 +35,7 @@ class PostModel {
       description: map['description'] ?? '',
       type: map['type'] ?? 'lost',
       location: map['location'] ?? '',
+      district: map['district'] ?? '',
       latitude: map['latitude']?.toDouble(),
       longitude: map['longitude']?.toDouble(),
       imageUrl: map['imageUrl'],
@@ -48,6 +51,7 @@ class PostModel {
       'description': description,
       'type': type,
       'location': location,
+      'district': district,
       'latitude': latitude,
       'longitude': longitude,
       'imageUrl': imageUrl,

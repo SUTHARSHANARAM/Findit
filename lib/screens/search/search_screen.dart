@@ -66,7 +66,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (_searchQuery.isNotEmpty) {
                   filteredPosts = filteredPosts.where((post) =>
                       post.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                      post.description.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+                      post.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      post.district.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      post.location.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
                 }
 
                 if (filteredPosts.isEmpty) {

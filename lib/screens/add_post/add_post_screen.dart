@@ -25,6 +25,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   final _locationController = TextEditingController();
+  final _districtController = TextEditingController();
   
   String _selectedType = 'lost';
   bool _isLoading = false;
@@ -42,6 +43,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       _titleController.text = widget.existingPost!.title;
       _descController.text = widget.existingPost!.description;
       _locationController.text = widget.existingPost!.location;
+      _districtController.text = widget.existingPost!.district;
       _selectedType = widget.existingPost!.type;
       _latitude = widget.existingPost!.latitude;
       _longitude = widget.existingPost!.longitude;
@@ -116,6 +118,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     _titleController.dispose();
     _descController.dispose();
     _locationController.dispose();
+    _districtController.dispose();
     super.dispose();
   }
 
@@ -137,6 +140,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           description: _descController.text.trim(),
           type: _selectedType,
           location: _locationController.text.trim(),
+          district: _districtController.text.trim(),
           latitude: _latitude,
           longitude: _longitude,
           imageUrl: imageUrl,
@@ -274,7 +278,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                     child: TextFormField(
                       controller: _locationController,
                       decoration: const InputDecoration(
-                        labelText: 'Location where it was seen/found',
+                        labelText: 'Location (landmark, street name...)',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.location_on),
                       ),
@@ -292,9 +296,43 @@ class _AddPostScreenState extends State<AddPostScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _districtController,
+                decoration: const InputDecoration(
+                  labelText: 'District / Region (e.g. Chennai, Manhattan)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.map_outlined),
+                ),
+                validator: (val) => val == null || val.isEmpty ? 'Please enter a district or region' : null,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.security_outlined, color: Colors.blue.shade800, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Safety Tip: Do not write down highly unique details (like serial numbers or inner contents) in the description. Keep these secret to verify claims in chat.',
+                        style: TextStyle(
+                          color: Colors.blue.shade800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(
-                  labelText: 'Description (color, brand, distinguishing features...)',
+                  labelText: 'Description (color, brand, general details...)',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
