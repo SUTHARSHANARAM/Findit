@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../models/post_model.dart';
+import '../../providers/post_provider.dart';
 import '../../widgets/post_card.dart';
 import '../../core/constants/colors.dart';
 
@@ -14,7 +15,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
-  final User? _currentUser = AuthService().currentUser;
+  final AppUser? _currentUser = AuthService().currentUser;
   late TabController _tabController;
 
   @override
@@ -172,41 +173,63 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           
           // Tab view content
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('posts')
-                  .where('userId', isEqualTo: _currentUser.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
+            child: Consumer<PostProvider>(
+              builder: (context, postProvider, child) {
+                if (AuthService().isLocalUser) {
+                  final List<PostModel> myPosts = postProvider.posts
+                      .where((p) => p.userId == _currentUser.uid)
+                      .toList();
+                  myPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                  final List<PostModel> lostPosts = myPosts.where((p) => p.type == 'lost').toList();
+                  final List<PostModel> foundPosts = myPosts.where((p) => p.type == 'found').toList();
+
+                  return TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildPostsList(myPosts),
+                      _buildPostsList(lostPosts),
+                      _buildPostsList(foundPosts),
+                    ],
                   );
                 }
 
-                // Convert docs to PostModel instances
-                final docs = snapshot.data?.docs ?? [];
-                final List<PostModel> myPosts = docs.map((doc) {
-                  return PostModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-                }).toList();
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('posts')
+                      .where('userId', isEqualTo: _currentUser.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text('Error: ${snapshot.error}'),
+                      );
+                    }
 
-                // Sort posts in-memory to avoid needing composite indexes
-                myPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                    // Convert docs to PostModel instances
+                    final docs = snapshot.data?.docs ?? [];
+                    final List<PostModel> myPosts = docs.map((doc) {
+                      return PostModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+                    }).toList();
 
-                // Filter lists
-                final List<PostModel> lostPosts = myPosts.where((p) => p.type == 'lost').toList();
-                final List<PostModel> foundPosts = myPosts.where((p) => p.type == 'found').toList();
+                    // Sort posts in-memory to avoid needing composite indexes
+                    myPosts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildPostsList(myPosts),
-                    _buildPostsList(lostPosts),
-                    _buildPostsList(foundPosts),
-                  ],
+                    // Filter lists
+                    final List<PostModel> lostPosts = myPosts.where((p) => p.type == 'lost').toList();
+                    final List<PostModel> foundPosts = myPosts.where((p) => p.type == 'found').toList();
+
+                    return TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildPostsList(myPosts),
+                        _buildPostsList(lostPosts),
+                        _buildPostsList(foundPosts),
+                      ],
+                    );
+                  },
                 );
               },
             ),

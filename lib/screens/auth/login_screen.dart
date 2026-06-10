@@ -269,6 +269,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             icon: Image.network(
                               'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/24px-Google_%22G%22_logo.svg.png',
                               height: 20,
+                              width: 20,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.login_outlined, size: 20);
+                              },
                             ),
                             label: const Text(
                               'Sign In with Google',

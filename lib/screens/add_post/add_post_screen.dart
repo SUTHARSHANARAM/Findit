@@ -163,7 +163,11 @@ class _AddPostScreenState extends State<AddPostScreen> {
         } else {
           // Fallback dummy save
           await Future.delayed(const Duration(seconds: 1));
-          provider.addPost(newPost);
+          if (widget.existingPost == null) {
+            provider.addPost(newPost);
+          } else {
+            provider.updatePost(newPost);
+          }
           if (!mounted) return;
           setState(() => _isLoading = false);
           Navigator.pop(context);

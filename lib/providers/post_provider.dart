@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/post_model.dart';
+import '../services/auth_service.dart';
 
 class PostProvider with ChangeNotifier {
-  // PRO TIP: Safety Toggle! 
-  // Set to true once you have run `flutterfire configure`. Default is false to keep dummy data working!
-  bool useFirebase = true;
+  bool _useFirebase = true;
+
+  // Getter checks both the toggle AND whether we are signed in as a local user!
+  bool get useFirebase => _useFirebase && !AuthService().isLocalUser;
 
   // Dummy data for V1
   final List<PostModel> _posts = [
@@ -15,6 +17,7 @@ class PostProvider with ChangeNotifier {
       type: "lost",
       location: "Central Park Entrance",
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      userId: 'local_google_user',
     ),
     PostModel(
       id: "2",
@@ -23,19 +26,54 @@ class PostProvider with ChangeNotifier {
       type: "found",
       location: "College Gate",
       createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+      userId: 'other_user',
     ),
   ];
 
   List<PostModel> get posts => [..._posts];
 
   void toggleFirebase(bool value) {
-    useFirebase = value;
+    _useFirebase = value;
     notifyListeners();
   }
 
   void addPost(PostModel post) {
     _posts.insert(0, post); // Add at the top for feed
     notifyListeners();
+  }
+
+  void updatePost(PostModel post) {
+    final index = _posts.indexWhere((p) => p.id == post.id);
+    if (index != -1) {
+      _posts[index] = post;
+      notifyListeners();
+    }
+  }
+
+  void deletePost(String id) {
+    _posts.removeWhere((p) => p.id == id);
+    notifyListeners();
+  }
+
+  void updatePostStatus(String id, bool isResolved) {
+    final index = _posts.indexWhere((p) => p.id == id);
+    if (index != -1) {
+      final p = _posts[index];
+      _posts[index] = PostModel(
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        type: p.type,
+        location: p.location,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        imageUrl: p.imageUrl,
+        createdAt: p.createdAt,
+        userId: p.userId,
+        isResolved: isResolved,
+      );
+      notifyListeners();
+    }
   }
 
   // Search feature implementation

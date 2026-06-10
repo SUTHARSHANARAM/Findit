@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:provider/provider.dart';
 import '../../services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/colors.dart';
 import '../../models/post_model.dart';
+import '../../providers/post_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../services/chat_service.dart';
 import '../chat/chat_screen.dart';
@@ -48,7 +50,12 @@ class PostDetailScreen extends StatelessWidget {
               );
               
               if (confirm == true) {
-                await FirestoreService().deletePost(post.id);
+                final provider = Provider.of<PostProvider>(context, listen: false);
+                if (provider.useFirebase) {
+                  await FirestoreService().deletePost(post.id);
+                } else {
+                  provider.deletePost(post.id);
+                }
                 if (!context.mounted) return;
                 Navigator.pop(context); // Go back to Home
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item deleted permanently.')));
@@ -164,7 +171,12 @@ class PostDetailScreen extends StatelessWidget {
               CustomButton(
                 text: "Mark as Resolved \u2714",
                 onPressed: () async {
-                  await FirestoreService().updatePostStatus(post.id, true);
+                  final provider = Provider.of<PostProvider>(context, listen: false);
+                  if (provider.useFirebase) {
+                    await FirestoreService().updatePostStatus(post.id, true);
+                  } else {
+                    provider.updatePostStatus(post.id, true);
+                  }
                   if (!context.mounted) return;
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(

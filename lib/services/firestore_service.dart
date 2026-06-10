@@ -2,7 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/post_model.dart';
 
 class FirestoreService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseFirestore get _db {
+    try {
+      return FirebaseFirestore.instance;
+    } catch (_) {
+      throw Exception("Firestore unavailable");
+    }
+  }
 
   // Get a stream of all posts, ordered by latest
   Stream<List<PostModel>> getPostsStream() {
