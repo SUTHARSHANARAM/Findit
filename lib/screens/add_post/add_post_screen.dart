@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/constants/colors.dart';
@@ -103,7 +105,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       if (permission == LocationPermission.denied) return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fetching exact GPS...')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fetching exact GPS and address details...')));
     Position position = await Geolocator.getCurrentPosition();
     
     setState(() {
@@ -111,6 +113,40 @@ class _AddPostScreenState extends State<AddPostScreen> {
       _longitude = position.longitude;
       _locationController.text = "${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
     });
+
+    try {
+      final response = await http.get(Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&zoom=18'
+      ), headers: {
+        'User-Agent': 'FindItApp/1.0 (Lost & Found application)'
+      }).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final address = data['address'] ?? {};
+        
+        // Extract district or county or city
+        String district = address['county'] ?? address['district'] ?? address['city_district'] ?? address['city'] ?? address['suburb'] ?? '';
+        String displayName = data['display_name'] ?? '';
+        
+        // Format a neat landmark display name
+        List<String> parts = displayName.split(',');
+        String cleanLocation = parts.length > 2 
+            ? "${parts[0].trim()}, ${parts[1].trim()}" 
+            : displayName;
+
+        setState(() {
+          if (district.isNotEmpty) {
+            _districtController.text = district;
+          }
+          if (cleanLocation.isNotEmpty) {
+            _locationController.text = cleanLocation;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Reverse geocoding failed: $e');
+    }
   }
 
   @override
